@@ -1,6 +1,9 @@
 #include "eventdeviceprovider.h"
 #include "eventinputdevice.h"
 
+#include <unistd.h>
+#include <fcntl.h>
+
 #include <QFileInfo>
 #include <QTimer>
 #include <QFile>
@@ -17,10 +20,6 @@ void QLinuxEventDeviceProvider::init()
     QTimer::singleShot(0, this, SLOT(rescanEventNodes()));
 }
 
-void QLinuxEventDeviceProvider::deviceDestroyed(QString eventNode) {
-    eventInstances.removeOne(eventNode);
-}
-
 void QLinuxEventDeviceProvider::rescanEventNodes() {
     QStringList::iterator i = eventInstances.begin();
     while(i != eventInstances.end()) {
@@ -31,7 +30,7 @@ void QLinuxEventDeviceProvider::rescanEventNodes() {
             i++;
     }
 
-    QFile* f = new QFile();
+    int node;
     foreach(QFileInfo file, QDir("/dev/input").entryInfoList(QStringList() <<
                              "event*", QDir::System | QDir::Files, QDir::Name)) {
 
@@ -40,15 +39,11 @@ void QLinuxEventDeviceProvider::rescanEventNodes() {
         if(eventInstances.contains(eventFilePath))
             continue;
 
-        f->setFileName(eventFilePath);
-        if(f->open(QFile::ReadOnly)) {
-            QLinuxInputDevice* dev = new QLinuxInputDevice(f);
-            connect(dev, SIGNAL(destroyed(QString)), this, SLOT(deviceDestroyed(QString)));
+        node = open(eventFilePath.toLocal8Bit().data(), O_RDONLY);
+        if(node > -1) {
+            QLinuxInputDevice* dev = new QLinuxInputDevice(node);
             emit deviceFound(eventFilePath, dev);
             eventInstances << eventFilePath;
-
-            f = new QFile();
         }
     }
-    f->deleteLater();
 }

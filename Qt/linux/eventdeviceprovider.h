@@ -16,7 +16,6 @@ protected:
     
 private slots:
     void rescanEventNodes();
-    void deviceDestroyed(QString eventNode);
     
 private:
     QFileSystemWatcher inputWatcher;

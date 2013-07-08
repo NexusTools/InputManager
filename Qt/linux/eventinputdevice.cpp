@@ -7,31 +7,30 @@
 #include <QDebug>
 #include <QFile>
 
+#include <unistd.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <linux/input.h>
 
-QLinuxInputDevice::QLinuxInputDevice(QFile *f)
+QLinuxInputDevice::QLinuxInputDevice(int f) : notifier(f, QSocketNotifier::Read)
 {
     _node = f;
-    connect(_node, SIGNAL(destroyed()), this, SLOT(deleteLater()));
-    connect(_node, SIGNAL(readChannelFinished()), this, SLOT(deleteLater()));
-    connect(_node, SIGNAL(aboutToClose()), this, SLOT(deleteLater()));
-    connect(_node, SIGNAL(readyRead()), this, SLOT(readEvents()));
+    connect(&notifier, SIGNAL(activated(int)), this, SLOT(readEvents()));
 
     char temp[200];
 
     memset(temp, 0, sizeof(temp));
-    if(ioctl(_node->handle(), EVIOCGNAME(sizeof(temp)), temp) > 2)
+    if(ioctl(_node, EVIOCGNAME(sizeof(temp)), temp) > 2)
         _name = temp;
     else {
-        _name = QString("Unknown (%1)").arg(f->fileName());
+        _name = QString("Unknown");
         perror("evdev ioctl");
     }
 
     memset(temp, 0, sizeof(temp));
-    if(ioctl(_node->handle(), EVIOCGID, temp) >= 0) {
-        //*((quint16*)&_deviceID) = ((input_id*)temp)->vendor;
-        //*((quint16*)(&_deviceID + 2)) = ((input_id*)temp)->product;
+    if(ioctl(_node, EVIOCGID, temp) >= 0) {
+        _deviceID[0] = ((input_id*)temp)->vendor;
+        _deviceID[1] = ((input_id*)temp)->product;
     } else
         perror("evdev ioctl");
 
@@ -47,28 +46,22 @@ QLinuxInputDevice::QLinuxInputDevice(QFile *f)
     } else
         perror("evdev ioctl");*/
 
-    readEvents();
+    //readEvents();
 }
 
 void QLinuxInputDevice::readEvents() {
-    qDebug() << "Reading events" << _node->bytesAvailable();
+    qDebug() << "Reading events" << _name;
 
     input_event event;
-    while(_node->bytesAvailable() >= sizeof(input_event)) {
-        if(_node->read((char*)&event, sizeof(input_event)) != sizeof(input_event)) {
-            deleteLater();
-            break;
-        }
+    while(read(_node,&event,sizeof(struct input_event)) == sizeof(input_event))
         qDebug() << "Event" << event.type << event.code << event.value;
-    }
+
 }
 
 QLinuxInputDevice::~QLinuxInputDevice() {
     qDebug() << _name << "Destroyed";
-    emit destroyed(_node->fileName());
 
-    _node->close();
-    delete _node;
+    close(_node);
 }
 
 #endif

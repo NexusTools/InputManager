@@ -2,6 +2,7 @@
 #define QLINUXINPUTDEVICE_H
 
 #include <QObject>
+#include <QSocketNotifier>
 
 #include "../qinputdevice.h"
 
@@ -16,7 +17,7 @@ public:
     virtual ~QLinuxInputDevice();
 
     inline QString name() const{return _name;}
-    inline quint32 rawDeviceID() const{return _deviceID;}
+    inline quint32 rawDeviceID() const{return *((quint32*)_deviceID);}
 
 signals:
     void powerLevelChanged(float);
@@ -26,12 +27,14 @@ private slots:
     void readEvents();
 
 private:
-    explicit QLinuxInputDevice(QFile*);
+    explicit QLinuxInputDevice(int);
+
+    QSocketNotifier notifier;
 
     QString _name;
-    quint32 _deviceID;
+    quint16 _deviceID[2];
     float _charge;
-    QFile* _node;
+    int _node;
     
 };
 
