@@ -6,7 +6,7 @@
 
 QT       -= gui
 
-TARGET = Qt
+TARGET = InputManager
 contains(CONFIG, standalone) {
 	TEMPLATE = app
 } else {
