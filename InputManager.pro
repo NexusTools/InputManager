@@ -24,16 +24,18 @@ contains(CONFIG, standalone) {
 }
 
 
-SOURCES += qinputmanager.cpp \
-    linux/eventdeviceprovider.cpp \
+SOURCES += qinputmanager.cpp
+
+unix:!mac:SOURCES += linux/eventdeviceprovider.cpp \
     x11/xinputdeviceprovider.cpp \
     linux/eventinputdevice.cpp
 
 HEADERS += qinputmanager.h\
         qt_global.h \
     qinputdevice.h \
-    linux/eventdeviceprovider.h \
-    qinputdeviceprovider.h \
+    qinputdeviceprovider.h
+
+unix:!mac:HEADERS += linux/eventdeviceprovider.h \
     x11/xinputdeviceprovider.h \
     linux/eventinputdevice.h
 
